@@ -3,7 +3,7 @@ import platform
 import os
 
 # Make this unique, and don't share it with anybody.
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY = os.getenv("MM_GIZMO_SECRET_KEY")
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 # ------------------------------------------------------------------------------
@@ -125,8 +125,7 @@ INSTALLED_APPS = (
 # ------------------------------------------------------------------------------
 # Absolute path of the log file.  Note the slash after feedmagnet that is
 # required
-BACKUP_LOG_FILE_LOCATION = ("/var/log/%s_backup_client.log"
-    % platform.node())
+BACKUP_LOG_FILE_LOCATION = os.getenv("MM_GIZMO_BACKUP_LOG_PATH")
 # Directory the local backup will be written to
 # must have trailing slash
 BACKUP_LOCAL_TARGET_DIR = "/tmp/"
@@ -136,5 +135,4 @@ BACKUP_LOCAL_TARGET_DIR = "/tmp/"
 # ------------------------------------------------------------------------------
 # Absolute path of the log file.  Note the slash after feedmagnet that is
 # required
-DB_MAINTENANCE_LOG_FILE_LOCATION = ("/var/log/feedmagnet/"
-    "%s_db_maintenance_client.log" % platform.node())
+DB_MAINTENANCE_LOG_FILE_LOCATION = os.getenv("MM_GIZMO_MAINTENANCE_LOG_PATH")
