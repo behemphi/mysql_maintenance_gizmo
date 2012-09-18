@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import connection
 from os import rename
 from os import system
+from os import getenv
 
 class DbMaintenaceClient(object):
     """ Maintenance client controlled by cron, and reporting to utility server
@@ -93,8 +94,9 @@ class DbMaintenaceClient(object):
         if len(hostname) == 0:
             hostname = platform.node()
 
-        slow_log_path = "/db/mysql/admin/%s_slow_query.log" % hostname
-        old_log_path = "/db/mysql/admin/%s_slow_query.log-old" % hostname
+        slow_log_path = settings.DB_MAINTENANCE_SLOW_LOG_PATH
+        old_log_path = "%s-old" % slow_log_path
+        
         try:
             os.rename(slow_log_path,old_log_path)
             self._logger.info("moved file %s to %s" % (
@@ -112,18 +114,11 @@ class DbMaintenaceClient(object):
             cmd = "mysqladmin --user %s -p%s flush-logs" % (
                 settings.DATABASES["default"]["NAME"],
                 settings.DATABASES["default"]["PASSWORD"])
-#            cmd = "mysqladmin  --user=" \
-#                  + settings.DATABASES["default"]["NAME"] \
-#                  + " --password=" + settings.DATABASES["default"]["PASSWORD"] \
-#                  + " flush-logs"
             flush_status = os.system(cmd)
             if flush_status:
                 msg = ("mysqladmin returned an error, check %s for "
                        "mysqldump command to assist in troubleshooting" %
                        settings.DB_MAINTENANCE_LOG_FILE_LOCATION)
-#                msg = "mysqladmin  returned an error, check "  \
-#                    + settings.DB_MAINTENANCE_LOG_FILE_LOCATION \
-#                    + " for mysqldump command to assist in troubleshooting"
                 self.logger.error(msg)
                 self.logger.error(cmd)
                 raise MysqladminError(msg)

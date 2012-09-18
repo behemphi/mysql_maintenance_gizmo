@@ -136,3 +136,6 @@ BACKUP_LOCAL_TARGET_DIR = "/tmp/"
 # Absolute path of the log file.  Note the slash after feedmagnet that is
 # required
 DB_MAINTENANCE_LOG_FILE_LOCATION = os.getenv("MM_GIZMO_MAINTENANCE_LOG_PATH")
+
+# Absolute path of the slow query log for rotation
+DB_MAINTENANCE_SLOW_LOG_PATH = os.getenv("MM_GIZMO_SLOW_LOG_PATH")
