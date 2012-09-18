@@ -16,7 +16,6 @@ class BackupClient(object):
         # set name of backup file and its zipped version
         self._hostname = platform.node()
         self._set_backup_file_name()
-        print self.backup_file_name
         self._timestamp = str(datetime.datetime.now())
         # get a cloudfiles connection
         try:

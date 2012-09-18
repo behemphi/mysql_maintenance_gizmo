@@ -119,8 +119,8 @@ class DbMaintenaceClient(object):
                 msg = ("mysqladmin returned an error, check %s for "
                        "mysqldump command to assist in troubleshooting" %
                        settings.DB_MAINTENANCE_LOG_FILE_LOCATION)
-                self.logger.error(msg)
-                self.logger.error(cmd)
+                self._logger.error(msg)
+                self._logger.error(cmd)
                 raise MysqladminError(msg)
 
 class MysqlConnectionError(Exception):
