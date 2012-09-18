@@ -112,12 +112,12 @@ class DbMaintenaceClient(object):
         if flush:
             self._logger.info("flushing logs")
             cmd = "mysqladmin --user %s -p%s flush-logs" % (
-                settings.DATABASES["default"]["NAME"],
+                settings.DATABASES["default"]["USER"],
                 settings.DATABASES["default"]["PASSWORD"])
             flush_status = os.system(cmd)
             if flush_status:
                 msg = ("mysqladmin returned an error, check %s for "
-                       "mysqldump command to assist in troubleshooting" %
+                       "the command to assist in troubleshooting" %
                        settings.DB_MAINTENANCE_LOG_FILE_LOCATION)
                 self._logger.error(msg)
                 self._logger.error(cmd)
