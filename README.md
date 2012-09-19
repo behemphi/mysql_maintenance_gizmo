@@ -89,10 +89,66 @@ Just clone the repo to `/opt`.
 
 ```bash
 > cd /opt
-> git clone 
+> git clone git@github.com:behemphi/mysql_maintenance_gizmo.git
 ```
 
-
-
+Remember that it will _not_ work unless you are the mm_gizmo user, or you have decided to do the configuration 
+for another user.
 
 ## Usage
+From the command line, switch to the home directory of MySQL Mainteance Gizmo:
+
+```bash
+> cd /opt/mysql_maintenance_gizmo
+```
+
+### Creating a Logical Database Backup
+MM Gizmo performs the following actions to backup your database:
+* Creates a non-locking (--single-transaction) logical (mysqldump) backup the specified schema to the /tmp directory
+* Zips this file
+* Ships this file with an expiry header to Rackspace Cloudfiles
+* deletes the files in /tmp
+* logs its steps along the way to the file specified in the configuration above
+ 
+```bash
+> ./manage.py dobackup
+```
+
+Note that while the database is available during the backup, load is placed on the server.  Understand what your
+machine is capable of and what your business requirements are for data retention and uptime.  Any backup process can 
+bring down a busy machine, this one is no exception.
+
+### Rotating the Slow Query Log
+If you have the slow query log on it is a fair statement that if you haven't looked in the last _n_ days where _n_ is
+the usual number of days between releases, then likely it is not worth caring what is in this log.  
+
+The `rotateslowquerylog` job:
+* moves the existing slow query log to the the same file name with `-old` appended
+* uses mysqladmin to issue a `flush logs` command and reopening the slow log
+
+If you have need of further use of your old file, be sure to move it as MM Gizmo will overwrite it the next time
+the `rotateslowquerylog` job is run.
+
+### Table Optimization
+Tables in most databases should be optimized on a regular basis. MM Gizmo facilitates this by:
+* getting a list of tables for the specified schema
+* Issuing the indicated command 
+* Logging its actions and MySQL's response to the file specified in the configuration above
+
+To analyze all tables in the schema use the command like this:
+```bash
+> ./manage.py dooptimizermaintenance --analyze=all
+```
+To analyze only specific tables in the schema list tables separated by commas with no spaces
+```bash
+> ./manage.py dooptimizermaintenance --analyze=table1,table2,table3
+```
+
+The `optimize` and `check` commands are also available.  Check the MySQL documentation for the effect of
+these commands for your version and storage engine.  
+
+Again, a word of warning.  Optimize and Check are _very_ heavy operations that can cause queries on to 
+wait while they do their job (i.e. the get a write lock on a whole table).  Be sure you think about what 
+you are doing and when you are doing it before issuing the command.
+
+
