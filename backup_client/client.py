@@ -1,4 +1,4 @@
-import cloudfiles, datetime, gzip, hashlib, logging, os, platform, time
+import cloudfiles, datetime, gzip, hashlib, logging, os, platform, time, sys
 from django.conf import settings
 
 class BackupClient(object):
@@ -25,7 +25,7 @@ class BackupClient(object):
                 settings.CLOUDFILES_USER, settings.CLOUDFILES_API_KEY)
         except:
             msg = "Unable to establish a connection to cloudfiles"
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise CloudfileConnectionError(msg)
 
     def local_backup(self):
@@ -44,8 +44,8 @@ class BackupClient(object):
                 msg = ("mysqldump returned an error, check %s for mysqldump "
                        "command to assist in troubleshooting" %
                        settings.BACKUP_LOG_FILE_LOCATION)
-                self.logger.error(msg)
-                self.logger.error(cmd)
+                self.logger.exception(msg)
+                self.logger.exception(cmd)
                 raise MysqldumpError(msg)
 
             self.logger.info("Backup started: %s" % cmd)
@@ -55,7 +55,7 @@ class BackupClient(object):
                 self._compressed_size)
         else:
             msg = "Not enough space on drive to safely create backup, aborting"
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise NotEnoughDiskSpaceError(msg)
 
 
@@ -99,14 +99,17 @@ class BackupClient(object):
             raise CleanUpTmpFilesError(msg)
 
     def _free_disk(self):
-        """Return true if there is more than a gigabyte of space to use for
-        making a backup."""
+        """Return true if there is more 10% of available disk space.  This
+        is only a quick and dirty check."""
         self.logger.info("Checking available disk space")
         bEnoughSpace = True
         s = os.statvfs("/")
-        bytes_available = s.f_bsize * s.f_bavail
+        bytes_available = s.f_bavail * s.f_frsize
+        total_available = s.f_blocks * s.f_frsize
         self.logger.info("Bytes available on disk: %s" % str(bytes_available))
-        if bytes_available < 1024 * 1024 * 1024:
+
+        #If less than 10% of disk space is avaialbe there is not enough space
+        if bytes_available > 0.1 * total_available:
             bEnoughSpace = False
         return bEnoughSpace
 
