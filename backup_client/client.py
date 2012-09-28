@@ -89,7 +89,6 @@ class BackupClient(object):
     def clean_up(self):
         """Delete local files (do I want to create a sub-directory in /tmp?)"""
         self.logger.info("Cleaning up local files.")
-        os.remove(self.backup_file_full_path)
         os.remove(self.zip_file_full_path)
 
 
