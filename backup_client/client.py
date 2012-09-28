@@ -91,7 +91,7 @@ class BackupClient(object):
         self.logger.info("Cleaning up local files.")
         try:
             os.remove(self.zip_file_full_path)
-            self.logger.info("/tmp/%s removed" % self.zip_file_full_path)
+            self.logger.info("%s removed" % self.zip_file_full_path)
         except:
             msg = ("A problem has occurred with the removal of %s \n" %
                   self.zip_file_full_path)
