@@ -82,15 +82,21 @@ class BackupClient(object):
         except:
             msg = ("Unable to write to remote storage failed:  %s" %
                  sys.exc_info()[0])
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise CloudfileWriteError(msg)
 
 
     def clean_up(self):
         """Delete local files (do I want to create a sub-directory in /tmp?)"""
         self.logger.info("Cleaning up local files.")
-        os.remove(self.zip_file_full_path)
-
+        try:
+            os.remove(self.zip_file_full_path)
+            self.logger.info("/tmp/%s removed" % self.zip_file_full_path)
+        except:
+            msg = ("A problem has occurred with the removal of %s \n" %
+                  self.zip_file_full_path)
+            self.logger.exception(msg)
+            raise CleanUpTmpFilesError(msg)
 
     def _free_disk(self):
         """Return true if there is more than a gigabyte of space to use for
@@ -129,10 +135,8 @@ class BackupClient(object):
         self.zip_file_name = "%s.gz" % self.backup_file_name
 
         # We want to delete this file after
-        # it has been writtent to cloud files.
+        # it has been written to cloud files.
         self.zip_file_full_path = "%s.gz" % self.backup_file_full_path
-
-
 
 
 class CloudfileConnectionError(Exception):
@@ -148,4 +152,8 @@ class MysqldumpError(Exception):
 
 
 class NotEnoughDiskSpaceError(Exception):
+    pass
+
+
+class CleanUpTmpFilesError(Exception):
     pass
