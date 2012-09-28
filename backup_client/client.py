@@ -1,4 +1,4 @@
-import cloudfiles, datetime, gzip, hashlib, logging, os, platform, time
+import cloudfiles, datetime, gzip, hashlib, logging, os, platform, time, sys
 from django.conf import settings
 
 class BackupClient(object):
@@ -25,7 +25,7 @@ class BackupClient(object):
                 settings.CLOUDFILES_USER, settings.CLOUDFILES_API_KEY)
         except:
             msg = "Unable to establish a connection to cloudfiles"
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise CloudfileConnectionError(msg)
 
     def local_backup(self):
@@ -35,37 +35,27 @@ class BackupClient(object):
             self.logger.info("Disk space is good, creating backup at %s" %
                              self.backup_file_name)
             cmd = ("mysqldump %s --user %s -p%s --single-transaction "
-                   "--opt > %s" % (settings.DATABASES['default']['NAME'],
+                   "--opt | gzip > %s" % (settings.DATABASES['default']['NAME'],
                    settings.DATABASES['default']['USER'],
                    settings.DATABASES['default']['PASSWORD'],
-                   self.backup_file_full_path))
+                   self.zip_file_full_path))
             dump_status = os.system(cmd)
             if dump_status:
                 msg = ("mysqldump returned an error, check %s for mysqldump "
                        "command to assist in troubleshooting" %
                        settings.BACKUP_LOG_FILE_LOCATION)
-                self.logger.error(msg)
-                self.logger.error(cmd)
+                self.logger.exception(msg)
+                self.logger.exception(cmd)
                 raise MysqldumpError(msg)
 
-            self.logger.info("Backup started:  %s" % cmd)
-            self._uncompressed_size = \
-                str(os.stat(self.backup_file_full_path).st_size)
-            self.logger.info("Backup complete, size (bytes):  %s" %
-                self._uncompressed_size)
+            self.logger.info("Backup started: %s" % cmd)
 
-            self.logger.info("gzip compression started")
-            source_file = open(self.backup_file_full_path,"rb")
-            target_file = gzip.open(self.zip_file_full_path,"wb")
-            target_file.writelines(source_file)
-            target_file.close()
-            source_file.close()
             self._compressed_size = str(os.stat(self.zip_file_full_path).st_size)
             self.logger.info("gzip compression complete size (bytes): %s" %
                 self._compressed_size)
         else:
             msg = "Not enough space on drive to safely create backup, aborting"
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise NotEnoughDiskSpaceError(msg)
 
 
@@ -81,7 +71,6 @@ class BackupClient(object):
             # Write the metadata
             backup.metadata = {"timestamp":self._timestamp,
                                "hostname":self._hostname,
-                               "uncompressed-size":self._uncompressed_size,
                                "compressed-size":self._compressed_size}
 
             # Keep the backup for a set number of days.  This makes use of the
@@ -93,26 +82,34 @@ class BackupClient(object):
         except:
             msg = ("Unable to write to remote storage failed:  %s" %
                  sys.exc_info()[0])
-            self.logger.error(msg)
+            self.logger.exception(msg)
             raise CloudfileWriteError(msg)
 
 
     def clean_up(self):
         """Delete local files (do I want to create a sub-directory in /tmp?)"""
         self.logger.info("Cleaning up local files.")
-        os.remove(self.backup_file_full_path)
-        os.remove(self.zip_file_full_path)
-
+        try:
+            os.remove(self.zip_file_full_path)
+            self.logger.info("%s removed" % self.zip_file_full_path)
+        except:
+            msg = ("A problem has occurred with the removal of %s \n" %
+                  self.zip_file_full_path)
+            self.logger.exception(msg)
+            raise CleanUpTmpFilesError(msg)
 
     def _free_disk(self):
-        """Return true if there is more than a gigabyte of space to use for
-        making a backup."""
+        """Return true if there is more 10% of available disk space.  This
+        is only a quick and dirty check."""
         self.logger.info("Checking available disk space")
         bEnoughSpace = True
         s = os.statvfs("/")
-        bytes_available = s.f_bsize * s.f_bavail
+        bytes_available = s.f_bavail * s.f_frsize
+        total_available = s.f_blocks * s.f_frsize
         self.logger.info("Bytes available on disk: %s" % str(bytes_available))
-        if bytes_available < 1024 * 1024 * 1024:
+
+        #If less than 10% of disk space is avaialbe there is not enough space
+        if bytes_available < 0.1 * total_available:
             bEnoughSpace = False
         return bEnoughSpace
 
@@ -121,7 +118,7 @@ class BackupClient(object):
         """Set the local names and paths for the local files."""
 
         # While unusual, backups may be made on the same day (e.g if a risky
-        # maintenanace task is taking place, so we will attach a hash for
+        # maintenance task is taking place, so we will attach a hash for
         # create unique names
         hash = hashlib.md5(str(time.time())).hexdigest()
 
@@ -141,10 +138,8 @@ class BackupClient(object):
         self.zip_file_name = "%s.gz" % self.backup_file_name
 
         # We want to delete this file after
-        # it has been writtent to cloud files.
+        # it has been written to cloud files.
         self.zip_file_full_path = "%s.gz" % self.backup_file_full_path
-
-
 
 
 class CloudfileConnectionError(Exception):
@@ -160,4 +155,8 @@ class MysqldumpError(Exception):
 
 
 class NotEnoughDiskSpaceError(Exception):
+    pass
+
+
+class CleanUpTmpFilesError(Exception):
     pass
