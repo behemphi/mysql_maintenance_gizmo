@@ -104,13 +104,12 @@ class BackupClient(object):
         self.logger.info("Checking available disk space")
         bEnoughSpace = True
         s = os.statvfs("/")
-        print s
         bytes_available = s.f_bavail * s.f_frsize
         total_available = s.f_blocks * s.f_frsize
         self.logger.info("Bytes available on disk: %s" % str(bytes_available))
 
         #If less than 10% of disk space is avaialbe there is not enough space
-        if bytes_available > 0.1 * total_available:
+        if bytes_available < 0.1 * total_available:
             bEnoughSpace = False
         return bEnoughSpace
 
