@@ -35,10 +35,10 @@ class BackupClient(object):
             self.logger.info("Disk space is good, creating backup at %s" %
                              self.backup_file_name)
             cmd = ("mysqldump %s --user %s -p%s --single-transaction "
-                   "--opt > %s" % (settings.DATABASES['default']['NAME'],
+                   "--opt | gzip > %s" % (settings.DATABASES['default']['NAME'],
                    settings.DATABASES['default']['USER'],
                    settings.DATABASES['default']['PASSWORD'],
-                   self.backup_file_full_path))
+                   self.zip_file_full_path))
             dump_status = os.system(cmd)
             if dump_status:
                 msg = ("mysqldump returned an error, check %s for mysqldump "
@@ -48,18 +48,8 @@ class BackupClient(object):
                 self.logger.error(cmd)
                 raise MysqldumpError(msg)
 
-            self.logger.info("Backup started:  %s" % cmd)
-            self._uncompressed_size = \
-                str(os.stat(self.backup_file_full_path).st_size)
-            self.logger.info("Backup complete, size (bytes):  %s" %
-                self._uncompressed_size)
+            self.logger.info("Backup started: %s" % cmd)
 
-            self.logger.info("gzip compression started")
-            source_file = open(self.backup_file_full_path,"rb")
-            target_file = gzip.open(self.zip_file_full_path,"wb")
-            target_file.writelines(source_file)
-            target_file.close()
-            source_file.close()
             self._compressed_size = str(os.stat(self.zip_file_full_path).st_size)
             self.logger.info("gzip compression complete size (bytes): %s" %
                 self._compressed_size)
@@ -81,7 +71,6 @@ class BackupClient(object):
             # Write the metadata
             backup.metadata = {"timestamp":self._timestamp,
                                "hostname":self._hostname,
-                               "uncompressed-size":self._uncompressed_size,
                                "compressed-size":self._compressed_size}
 
             # Keep the backup for a set number of days.  This makes use of the
@@ -121,7 +110,7 @@ class BackupClient(object):
         """Set the local names and paths for the local files."""
 
         # While unusual, backups may be made on the same day (e.g if a risky
-        # maintenanace task is taking place, so we will attach a hash for
+        # maintenance task is taking place, so we will attach a hash for
         # create unique names
         hash = hashlib.md5(str(time.time())).hexdigest()
 
