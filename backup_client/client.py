@@ -1,4 +1,4 @@
-import pyrox, datetime, gzip, hashlib, logging, os, platform, time, sys
+import pyrax, datetime, gzip, hashlib, logging, os, platform, time, sys
 from django.conf import settings
 
 class BackupClient(object):
@@ -66,14 +66,14 @@ class BackupClient(object):
         """write the local compressed backup file to cloudfiles."""
         self.logger.info("Writing file to remote storage")
         try:
-            backup = cf.upload_file(
+            backup = self.cf.upload_file(
                 settings.CLOUDFILES_ARCHIVE_CONTAINER, self.zip_file_full_path)
 
             # Write the metadata
             metadata = {"timestamp":self._timestamp,
                         "hostname":self._hostname,
                         "compressed-size":self._compressed_size}
-            cf.set_object_metadata(
+            self.cf.set_object_metadata(
                 settings.CLOUDFILES_ARCHIVE_CONTAINER, backup, metadata)
 
         except:
