@@ -1,4 +1,4 @@
-import cloudfiles, datetime, gzip, hashlib, logging, os, platform, time, sys
+import pyrox, datetime, gzip, hashlib, logging, os, platform, time, sys
 from django.conf import settings
 
 class BackupClient(object):
@@ -21,8 +21,11 @@ class BackupClient(object):
         try:
             self.logger.info("********** Start Backup **********")
             self.logger.info("Establishing connection to Cloudfiles")
-            self.conn = cloudfiles.get_connection(
+            # Establish a connection to Rackspace
+            self.conn = pyrax.set_credentials(
                 settings.CLOUDFILES_USER, settings.CLOUDFILES_API_KEY)
+            # Get a connection to cloudfiles for reading and writing.
+            self.cf = pyrax.cloudfiles
         except:
             msg = "Unable to establish a connection to cloudfiles"
             self.logger.exception(msg)
@@ -63,22 +66,16 @@ class BackupClient(object):
         """write the local compressed backup file to cloudfiles."""
         self.logger.info("Writing file to remote storage")
         try:
-            arch_dir = self.conn.get_container(
-                settings.CLOUDFILES_ARCHIVE_CONTAINER)
-            # Write the file
-            backup = arch_dir.create_object(self.zip_file_name)
-            backup.load_from_filename(self.zip_file_full_path)
-            # Write the metadata
-            backup.metadata = {"timestamp":self._timestamp,
-                               "hostname":self._hostname,
-                               "compressed-size":self._compressed_size}
+            backup = cf.upload_file(
+                settings.CLOUDFILES_ARCHIVE_CONTAINER, self.zip_file_full_path)
 
-            # Keep the backup for a set number of days.  This makes use of the
-            # custom header X-Delete-After and allows Cloudservers to take
-            # care of the expiration
-            backup.headers = {
-                "X-Delete-After": 86400 * settings.CLOUDFILES_BACKUP_EXPIRY_DAYS}
-            backup.sync_metadata()
+            # Write the metadata
+            metadata = {"timestamp":self._timestamp,
+                        "hostname":self._hostname,
+                        "compressed-size":self._compressed_size}
+            cf.set_object_metadata(
+                settings.CLOUDFILES_ARCHIVE_CONTAINER, backup, metadata)
+
         except:
             msg = ("Unable to write to remote storage failed:  %s" %
                  sys.exc_info()[0])
