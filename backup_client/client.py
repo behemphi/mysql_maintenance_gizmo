@@ -67,7 +67,8 @@ class BackupClient(object):
         self.logger.info("Writing file to remote storage")
         try:
             backup = self.cf.upload_file(
-                settings.CLOUDFILES_ARCHIVE_CONTAINER, self.zip_file_full_path)
+                settings.CLOUDFILES_ARCHIVE_CONTAINER, self.zip_file_full_path,
+                ttl=86400 * settings.CLOUDFILES_BACKUP_EXPIRY_DAYS)
 
             # Write the metadata
             metadata = {"timestamp":self._timestamp,
@@ -75,6 +76,8 @@ class BackupClient(object):
                         "compressed-size":self._compressed_size}
             self.cf.set_object_metadata(
                 settings.CLOUDFILES_ARCHIVE_CONTAINER, backup, metadata)
+
+
 
         except:
             msg = ("Unable to write to remote storage failed:  %s" %
