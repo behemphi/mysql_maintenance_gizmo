@@ -22,6 +22,7 @@ class BackupClient(object):
             self.logger.info("********** Start Backup **********")
             self.logger.info("Establishing connection to Cloudfiles")
             # Establish a connection to Rackspace
+            pyrax.set_setting("identity_type", "rackspace")
             self.conn = pyrax.set_credentials(
                 settings.CLOUDFILES_USER, settings.CLOUDFILES_API_KEY)
             # Get a connection to cloudfiles for reading and writing.
