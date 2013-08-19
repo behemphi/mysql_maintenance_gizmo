@@ -5,7 +5,10 @@ Mysql Maintenance Gizmo is a quick and dirty tool written for the Rackspace Clou
 * slow query log rotation
 * table maintenance (i.e. analyze, optimize, check)
 
-The code is in python using the Django framework.  It is intended to be run from like this:
+It has been used in production to backup up to 70 different MySQL instances nightly over the course of
+18 months, so it can be trusted.  
+
+It is intended to be run like this:
 
 ```bash
 > ./manage.py dobackup
